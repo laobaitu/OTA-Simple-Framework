@@ -3,10 +3,10 @@
 
 import configparser
 import socket
-import json
 import threading
 import logging
 import os
+import time
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,31 +22,35 @@ def InitSocket(ip, port, max_clients):
     logging.info('Attempt to bind IP/Port: %s:%d' % (ip, port))
     s.bind((ip, port))
     s.listen(max_clients)
-    #while True:
-    # 接受一个新连接:
-    sock, addr = s.accept()
-    # 创建新线程来处理TCP连接:
-    t = threading.Thread(target=ProccessThread, args=(sock, addr))
-    t.start()
+    while True:
+        # 接受一个新连接:
+        sock, addr = s.accept()
+        # 创建新线程来处理TCP连接:
+        t = threading.Thread(target=ProccessThread, args=(sock, addr))
+        t.start()
     pass
 
 def ProccessThread(sock, addr):
     logging.info('Accept new connection from %s:%s...' % addr)
     config = ReadConfig()
     while True:
-        data = json.loads(sock.recv(1024))
-        if 'request' not in data:
-            continue
-        if data['request'] == 'header':
+        data = sock.recv(1024)
+        time.sleep(1)
+        if not data or data.decode('utf-8') == 'exit':
+            break
+        
+        logging.info('Recieved data is : %s ...' % (data.decode('utf-8')))
+        if data.decode('utf-8') == 'header':
             SendHeader(sock, config)
-        elif data['request'] == 'package':
+        elif data.decode('utf-8') == 'package':
             SendPackage(sock, config)
-        elif data['request'] == 'exit':
+        elif data.decode('utf-8') == 'exit':
             sock.close()
             break
         else:
             continue
-    pass
+    sock.close()
+    logging.info('Connection from %s:%s closed.' % addr)
 
 def SendHeader(sock, config):
     logging.info('Send latest package header info: %s ...' % (config['Server']['latest']))
