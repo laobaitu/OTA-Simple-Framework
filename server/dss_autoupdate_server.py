@@ -45,17 +45,21 @@ def ProccessThread(sock, addr):
     config = ReadConfig()
     while True:
         try:
-            data = json.loads(sock.recv(int(config['Server']['buffer_size'])))
+            d = sock.recv(int(config['Server']['buffer_size']))
+            if not d:
+                logging.info('Recieved empty data, close the connection ...')
+                sock.close()
+                break
+            data = json.loads(d)
             logging.info('Recieved data is : %s ...' % data)
-            if not data:
-                continue
             if data['request'] == 'handshake':
                 SecurityCheck(sock, config, data['data']['security'])
             elif data['request'] == 'header':
                 SendHeader(sock, config)
             elif data['request'] == 'package':
-                SendPackage(set, config)
+                SendPackage(sock, config)
             elif data['request'] == 'exit':
+                CloseConnection(sock)
                 sock.close()
                 break
         except Exception as e:
@@ -79,6 +83,15 @@ def SecurityCheck(sock, config, security):
 def SendHeader(sock, config):
     response_data['response'] = 'header'
     response_data['data'] = {
+        'latest' : ''
+    }
+    response_data['data']['latest'] = config['Server']['latest']
+    logging.info('Send latest package header info: %s ...' % response_data)
+    sock.send(json.dumps(response_data).encode('utf-8'))
+
+def SendPackage(sock, config):
+    response_data['response'] = 'package'
+    response_data['data'] = {
         'latest' : '',
         'size' : '',
         'md5' : ''
@@ -87,26 +100,16 @@ def SendHeader(sock, config):
     filepath = config['Server']['path'] + os.path.sep + config['Server']['latest']
     response_data['data']['size'] = str(os.path.getsize(filepath))
     response_data['data']['md5'] = get_md5(filepath)
-    logging.info('Send latest package header info: %s ...' % response_data)
-    sock.send(json.dumps(response_data).encode('utf-8'))        
-
-def SendPackage(sock, config):
-    response_data = {
-        'response' : '',
-        'latest' : '',
-        'size' : '',
-        'md5' : ''
-    }
     logging.info('Send latest package file: %s ...' % response_data)
-    pass
+    sock.send(json.dumps(response_data).encode('utf-8'))
+    time.sleep(1)
+    logging.info('Sending...')
+    with open(filepath, 'rb') as fp:
+        for data in fp:
+            sock.send(data)
+    
 
 def CloseConnection(sock):
-    response_data = {
-        'response' : '',
-        'latest' : '',
-        'size' : '',
-        'md5' : ''
-    }
     logging.info('Exit proccess ...')
     pass
 
