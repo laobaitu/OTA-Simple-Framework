@@ -13,6 +13,7 @@
 ```
 +---server
     |   config.ini                  # 配置文件
+    |   calc_md5.py                 # 计算文件md5值的工具
     |   dss_autoupdate_server.py    # 服务器端推送服务
     |
     \---sv_package
@@ -31,6 +32,7 @@
 ```
 +---client
     |   config.ini                  # 配置文件
+    |   calc_md5.py                 # 计算文件md5值的工具
     |   dss_autoupdate_client.py    # 客户端自动更新软件
     |
     \---cl_package
@@ -55,8 +57,8 @@
 
 ```
 req = {
-    'request' : value
-    'data' : {} 
+    'request' : value，
+    'data' : {}
 }
 ```
 
