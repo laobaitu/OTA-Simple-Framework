@@ -45,7 +45,7 @@
 
 ### 时序图
 
-![](https://www.websequencediagrams.com/cgi-bin/cdraw?lz=dGl0bGUgT1RB5pe25bqP5Zu-CgphY3RvciBVc2VyCgoKVXNlci0-Q2xpZW50OiDlkK_liqjoh6rliqjmm7TmlrDnqIvluo8KCgAcBi0-K1NlcnZlcjog5bu656uLVENQ6L-e5o6lCgASBi0-LQBECOi_lOWbngAYBue7k-aenAAzE-ivt-axguacgOaWsOi9r-S7tuWMheS_oeaBrwA6GAAXFiAKCgphbHQg5pyJ5paw54mI5pysCiAgICAAgTAJVXMAawai6Zeu5piv5ZCm6ZyA6KaBAIFiBgAnBQCCBwYAgTMPAIE1ByAgICAATAVhbHQgAC4MABAGAF4NAIFBHQAmCQCCIRHmjqjpgIEAFxgAgnoIACUJoKHpqowAdAkAfQkAggEFABcF6YCa6L-HAIEWCQAxFOWxleW8gACBChIAXBWbv-aNouaXpwCCUwsAbRFlbHNlACcftOaWsOWksei0pQAsF25kAIFEEgCEeAgAhCoPlq3lvIAAgkERAIUbCYWz6ZetAIUaBwCCHA1lbHNlIOS4jQCDchEAIkoAgT8ICgBnBeaXoACFAhYAgTgZAIEsIQplbmQKCg&s=modern-blue)
+![](https://www.websequencediagrams.com/cgi-bin/cdraw?lz=dGl0bGUgT1RB5pe25bqP5Zu-CgphY3RvciBVc2VyCgoKVXNlci0-Q2xpZW50OiDlkK_liqjoh6rliqjmm7TmlrDnqIvluo8KCgAcBi0-U2VydmVyOiDlu7rnq4tUQ1Dov57mjqUAFworABkJj5HpgIHmoKHpqoznoIEKADQGLT4tAGUI6L-U5ZueABoHu5PmnpwAMxPor7fmsYLmnIDmlrDova_ku7bljIXkv6Hmga8AORkAGBUgCgoKYWx0IOacieaWsOeJiOacrAogICAgAIEwCVVzAGsGoumXruaYr-WQpumcgOimgQCCAwYAJwUAgigGAIEzDwCBNQcgICAgAEwFYWx0IAAuDAAQBgBeDQCBQR0AJgkAgiER5o6o6YCBABcYAIMbCAAlCQCCdgUAdAkAfQkAggEFAIMSBemAmui_hwCBFgkAMRTlsZXlvIAAgQoSAFwVm7_mjaLml6cAglMLAG0RZWxzZQCBFAflpLHotKUANB-05pawABYTAEYKbmQAgVESAIUeEACEPweWreW8gACCThEAhUoJhbPpl60AhUkHAIIpDQCBLwXkuI0Ag38RACJKAIE_CAoAghoGl6AAhQ8WAIE4GQCBLCEKZW5kCgo&s=modern-blue)
 
 ## 通信定义
 
@@ -56,11 +56,13 @@
 ```
 req = {
     'request' : value
+    'data' : {} 
 }
 ```
 
-| value | description |
+| request value | description |
 | ----- | ----------- |
+| handshake | 比对data内容，通过后才能继续 |
 | header | 请求最新版本信息 |
 | package | 请求软件包 |
 | exit | 断开连接 |
@@ -69,17 +71,22 @@ req = {
 
 ```
 resp = {
-    'filename' : name
-    'filesize' : size
-    'md5' : md5
-    'response' : value
+    'response' : value,
+    'data' : {}
 }
 ```
 
-| value | description |
+| response value | description |
 | ----- | ----------- |
 | connected | 连接成功 |
 | error | 错误 |
 | header | 最新版本信息 |
 | package | 后续数据是软件包 |
 
+data 的可能项目：
+
+```
+    'latest' : filename
+    'size' : size
+    'md5' : md5
+```

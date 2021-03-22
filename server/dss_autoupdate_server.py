@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin python
 # -*- coding: utf-8 -*-
 
 import configparser
@@ -6,15 +6,25 @@ import socket
 import threading
 import logging
 import os
+import json
 import time
+from calc_md5 import get_md5
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(levelname)s] %(asctime)s %(message)s"
+)
 
 CONFIG_FILE='config.ini'
 
+response_data = {
+    'response' : '',
+    'data' : {}
+}
+
 def ReadConfig():
     config = configparser.ConfigParser()
-    config.read(CONFIG_FILE)
+    config.read(CONFIG_FILE, encoding='utf-8')
     return config
 
 def InitSocket(ip, port, max_clients):
@@ -34,30 +44,70 @@ def ProccessThread(sock, addr):
     logging.info('Accept new connection from %s:%s...' % addr)
     config = ReadConfig()
     while True:
-        data = sock.recv(1024)
-        time.sleep(1)
-        if not data or data.decode('utf-8') == 'exit':
-            break
-        
-        logging.info('Recieved data is : %s ...' % (data.decode('utf-8')))
-        if data.decode('utf-8') == 'header':
-            SendHeader(sock, config)
-        elif data.decode('utf-8') == 'package':
-            SendPackage(sock, config)
-        elif data.decode('utf-8') == 'exit':
+        try:
+            data = json.loads(sock.recv(int(config['Server']['buffer_size'])))
+            logging.info('Recieved data is : %s ...' % data)
+            if not data:
+                continue
+            if data['request'] == 'handshake':
+                SecurityCheck(sock, config, data['data']['security'])
+            elif data['request'] == 'header':
+                SendHeader(sock, config)
+            elif data['request'] == 'package':
+                SendPackage(set, config)
+            elif data['request'] == 'exit':
+                sock.close()
+                break
+        except Exception as e:
+            logging.exception(e)
             sock.close()
             break
-        else:
-            continue
-    sock.close()
     logging.info('Connection from %s:%s closed.' % addr)
 
+
+def SecurityCheck(sock, config, security):
+    logging.info('Checking security code {%s} VS {%s} ...' % (config['Server']['security'], security))
+    if config['Server']['security'] == security:
+        response_data['response'] = 'connected'
+        response_data['data'] = {}
+    else:
+        response_data['response'] = 'error'
+        response_data['data'] = {}
+    logging.info('Send SecurityCheck response %s ...' % response_data)
+    sock.send(json.dumps(response_data).encode('utf-8'))
+
 def SendHeader(sock, config):
-    logging.info('Send latest package header info: %s ...' % (config['Server']['latest']))
-    pass
+    response_data['response'] = 'header'
+    response_data['data'] = {
+        'latest' : '',
+        'size' : '',
+        'md5' : ''
+    }
+    response_data['data']['latest'] = config['Server']['latest']
+    filepath = config['Server']['path'] + os.path.sep + config['Server']['latest']
+    response_data['data']['size'] = str(os.path.getsize(filepath))
+    response_data['data']['md5'] = get_md5(filepath)
+    logging.info('Send latest package header info: %s ...' % response_data)
+    sock.send(json.dumps(response_data).encode('utf-8'))        
 
 def SendPackage(sock, config):
-    logging.info('Send latest package file: %s ...' % (config['Server']['latest']))
+    response_data = {
+        'response' : '',
+        'latest' : '',
+        'size' : '',
+        'md5' : ''
+    }
+    logging.info('Send latest package file: %s ...' % response_data)
+    pass
+
+def CloseConnection(sock):
+    response_data = {
+        'response' : '',
+        'latest' : '',
+        'size' : '',
+        'md5' : ''
+    }
+    logging.info('Exit proccess ...')
     pass
 
 if __name__=='__main__':
