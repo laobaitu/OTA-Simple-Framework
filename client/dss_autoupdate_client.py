@@ -8,6 +8,8 @@ import os
 import time
 from calc_md5 import get_md5
 
+from tqdm import tqdm
+
 logging.basicConfig(
     level=logging.INFO,
     format="[%(levelname)s] %(asctime)s %(message)s"
@@ -26,7 +28,7 @@ def ReadConfig():
     config.read(CONFIG_FILE, encoding='utf-8')
     return config
 
-def InitSocket():
+def ExecUpdate():
     config = ReadConfig()
     ip = config['Client']['server']
     port = int(config['Client']['port'])
@@ -64,6 +66,7 @@ def RequestSecurity(sock, config):
     if response['response'] == 'connected':
         return True
     else:
+        logging.info(response['data']['reason']) 
         return False
 
 def RequestHeader(sock, config):
@@ -111,12 +114,14 @@ def RequestPackage(sock, config):
     time.sleep(1)
 
     with open(filepath, 'wb') as fp:
-        recieved_size = 0
-        while recieved_size < file_size:
-            data = sock.recv(buffer_size)
-            fp.write(data)
-            recieved_size += len(data)
-            logging.info('Package size %d out of %d recieved...' % (recieved_size, file_size))
+        with tqdm(total=file_size) as pbar:
+            recieved_size = 0
+            while recieved_size < file_size:
+                data = sock.recv(buffer_size)
+                fp.write(data)
+                recieved_size += len(data)
+                pbar.update(len(data))
+                # logging.info('Package size %d out of %d recieved...' % (recieved_size, file_size))
     
     if get_md5(filepath) == md5:
         logging.info('MD5 check success. Latest package is %s ...' % filepath)
@@ -137,10 +142,10 @@ def RequestExit(sock):
     sock.close()
 
 def AfterProccess(config):
-    logging.info(str(config))
+    
     pass
 
 if __name__=='__main__':    
-    InitSocket()
+    ExecUpdate()
     pass
 

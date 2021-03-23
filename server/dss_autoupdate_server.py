@@ -27,7 +27,12 @@ def ReadConfig():
     config.read(CONFIG_FILE, encoding='utf-8')
     return config
 
-def InitSocket(ip, port, max_clients):
+def ExecUpdate():
+    config = ReadConfig()
+    ip = config['Server']['ip']
+    port = int(config['Server']['port'])
+    max_clients = int(config['Server']['max_clients'])
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     logging.info('Attempt to bind IP/Port: %s:%d' % (ip, port))
     s.bind((ip, port))
@@ -47,19 +52,19 @@ def ProccessThread(sock, addr):
         try:
             d = sock.recv(int(config['Server']['buffer_size']))
             if not d:
-                logging.info('Recieved empty data, close the connection ...')
+                logging.info('[<-%s] Recieved empty data, close the connection ...' % addr)
                 sock.close()
                 break
             data = json.loads(d)
-            logging.info('Recieved data is : %s ...' % data)
+            logging.info('[<-%s] Recieved data is : %s ...' % (addr, data))
             if data['request'] == 'handshake':
-                SecurityCheck(sock, config, data['data']['security'])
+                SecurityCheck(sock, config, data['data']['security'], addr)
             elif data['request'] == 'header':
-                SendHeader(sock, config)
+                SendHeader(sock, config, addr)
             elif data['request'] == 'package':
-                SendPackage(sock, config)
+                SendPackage(sock, config, addr)
             elif data['request'] == 'exit':
-                CloseConnection(sock)
+                CloseConnection(sock, addr)
                 sock.close()
                 break
         except Exception as e:
@@ -69,27 +74,27 @@ def ProccessThread(sock, addr):
     logging.info('Connection from %s:%s closed.' % addr)
 
 
-def SecurityCheck(sock, config, security):
-    logging.info('Checking security code {%s} VS {%s} ...' % (config['Server']['security'], security))
+def SecurityCheck(sock, config, security, addr):
+    logging.info('[%s] Checking security code {%s} VS {%s} ...' % (addr, config['Server']['security'], security))
     if config['Server']['security'] == security:
         response_data['response'] = 'connected'
         response_data['data'] = {}
     else:
         response_data['response'] = 'error'
-        response_data['data'] = {}
-    logging.info('Send SecurityCheck response %s ...' % response_data)
+        response_data['data'] = {'reason' : 'Security code check failed.'}
+    logging.info('[->%s] Send SecurityCheck response %s ...' % (addr, response_data))
     sock.send(json.dumps(response_data).encode('utf-8'))
 
-def SendHeader(sock, config):
+def SendHeader(sock, config, addr):
     response_data['response'] = 'header'
     response_data['data'] = {
         'latest' : ''
     }
     response_data['data']['latest'] = config['Server']['latest']
-    logging.info('Send latest package header info: %s ...' % response_data)
+    logging.info('[->%s] Send latest package header info: %s ...' % (addr, response_data))
     sock.send(json.dumps(response_data).encode('utf-8'))
 
-def SendPackage(sock, config):
+def SendPackage(sock, config, addr):
     response_data['response'] = 'package'
     response_data['data'] = {
         'latest' : '',
@@ -100,21 +105,20 @@ def SendPackage(sock, config):
     filepath = config['Server']['path'] + os.path.sep + config['Server']['latest']
     response_data['data']['size'] = str(os.path.getsize(filepath))
     response_data['data']['md5'] = get_md5(filepath)
-    logging.info('Send latest package file: %s ...' % response_data)
+    logging.info('[->%s] Send latest package file: %s ...' % (addr, response_data))
     sock.send(json.dumps(response_data).encode('utf-8'))
     time.sleep(1)
-    logging.info('Sending...')
+    logging.info('[->(%s, %s)] Sending...' % (addr))
     with open(filepath, 'rb') as fp:
         for data in fp:
             sock.send(data)
     
 
-def CloseConnection(sock):
+def CloseConnection(sock, addr):
     logging.info('Exit proccess ...')
     pass
 
 if __name__=='__main__':
-    config = ReadConfig()
-    InitSocket(config['Server']['ip'], int(config['Server']['port']), int(config['Server']['max_clients']))
+    ExecUpdate()
     pass
 
